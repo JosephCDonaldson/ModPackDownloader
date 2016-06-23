@@ -1,6 +1,7 @@
 package com.nincraft.modpackdownloader.util;
 
 import com.google.common.base.Strings;
+import com.nincraft.modpackdownloader.container.CurseFile;
 import com.nincraft.modpackdownloader.container.DownloadableFile;
 import lombok.experimental.UtilityClass;
 import lombok.extern.log4j.Log4j2;
@@ -32,9 +33,9 @@ public final class FileSystemHelper {
 		try {
 			File downloadedFile = getDownloadedFile(fileName, folder);
 			if (downloadToLocalRepo) {
-				FileUtils.copyFileToDirectory(getLocalFile(fileName, newProjectName), new File(folder));
-			} else if (!downloadedFile.exists()){
-				FileUtils.moveFileToDirectory(getLocalFile(fileName, newProjectName), new File(folder), true);
+				FileUtils.copyFileToDirectory(getLocalFile(downloadableFile, newProjectName), new File(folder));
+			} else if (!downloadedFile.exists()) {
+				FileUtils.moveFileToDirectory(getLocalFile(downloadableFile, newProjectName), new File(folder), true);
 			}
 			if (!Strings.isNullOrEmpty(downloadableFile.getRename())) {
 				downloadedFile.renameTo(new File(downloadedFile.getParent() + File.separator + downloadableFile.getRename()));
@@ -44,8 +45,12 @@ public final class FileSystemHelper {
 		}
 	}
 
-	public static boolean isInLocalRepo(final String projectName, final String fileName) {
-		return getLocalFile(fileName, getProjectNameOrDefault(projectName)).exists();
+	public static boolean isInLocalRepo(final DownloadableFile downloadableFile) {
+		if (downloadableFile instanceof CurseFile) {
+			CurseFile curseFile = (CurseFile) downloadableFile;
+			return new File(Reference.userhome + File.separator + getProjectNameOrDefault(downloadableFile.getName()) + File.separator + curseFile.getFileID()).exists();
+		}
+		return getLocalFile(downloadableFile, getProjectNameOrDefault(downloadableFile.getName())).exists();
 	}
 
 	public static File getDownloadedFile(final String fileName) {
@@ -56,12 +61,19 @@ public final class FileSystemHelper {
 		return projectName != null ? projectName : "thirdParty";
 	}
 
-	public static File getLocalFile(DownloadableFile downloadableFile) {
-		return getLocalFile(downloadableFile.getFileName(), downloadableFile.getName());
-	}
-
-	public static File getLocalFile(final String fileName, final String newProjectName) {
-		return new File(Reference.userhome + newProjectName + File.separator + fileName);
+	public static File getLocalFile(final DownloadableFile downloadableFile, final String newProjectName) {
+		String fileNamePath = Reference.userhome + newProjectName + File.separator;
+		if (downloadableFile instanceof CurseFile) {
+			CurseFile curseFile = (CurseFile) downloadableFile;
+			fileNamePath += curseFile.getFileID() + File.separator;
+		}
+		if(Strings.isNullOrEmpty(downloadableFile.getFileName())){
+			fileNamePath += "*.jar";
+		}
+		else{
+			fileNamePath += downloadableFile.getFileName();
+		}
+		return new File(fileNamePath);
 	}
 
 	public static File getDownloadedFile(String fileName, String folder) {
